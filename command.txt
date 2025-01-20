@@ -1,0 +1,4 @@
+python -m venv .alahcapek
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.alahcapek\Scripts\activate di terminal vscode
+pip install -r requirements.txt
