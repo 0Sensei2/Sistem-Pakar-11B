@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeHareCare</title>
+  <link rel="stylesheet" href="../static/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-content">
+        <h3>WeHareCare</h3>
+        <p>1. apa saja pencegahan yang dilakukan untuk penyakit menular pada kelinci?</p>
+        <p>2. apa saja penyakit menular pada kelinci?</p>
+        <p>3. apa saja gejala gejala penyakit menular pada kelinci?</p>
+        <p>4. apa solusi untuk penyakit VHD?</p>
+        <p>5. apa saja gejala dari penyakit VHD?</p>
+        <p>6. apa saja pencegahan untuk penyakit VHD?</p>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="marvel-device nexus5">
+        <div class="top-bar"></div>
+        <div class="sleep"></div>
+        <div class="volume"></div>
+        <div class="camera"></div>
+        <div class="screen">
+          <div class="screen-container">
+            <div class="chat">
+              <div class="chat-container">
+                <div class="user-bar">
+                  <div class="toggle-sidebar">
+                    <button id="openSidebarButton">
+                      <i class="fas fa-bars"></i>
+                    </button>
+                  </div>
+                  <div class="name">
+                    <span>WeHareCare</span>
+                    <span class="status">online</span>
+                  </div>
+                </div>
+                <div class="conversation">
+                  <div class="conversation-container">
+                    <div class="message received">
+                      <div class="message-content">WeHareCare</div>
+                      <span class="metadata"><span class="time"></span></span>
+                      <button class="speaker-btn">
+                        <i class="fas fa-volume-up"></i>
+                      </button>
+                      <button class="copy-btn">
+                        <i class="fas fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <form class="conversation-compose">
+                    <input class="input-msg" name="input" placeholder="Type a message" autocomplete="off" autofocus>
+                    <button type="button" class="mic"> <!-- Ubah type menjadi "button" -->
+                      <div class="circle">
+                        <i class="fas fa-microphone"></i>
+                      </div>
+                    </button>
+                    <button type="submit" class="send"> <!-- Pastikan ini tetap sebagai "submit" -->
+                      <div class="circle">
+                        <i class="fas fa-paper-plane"></i>
+                      </div>
+                    </button>
+                    <div class="hapus">
+                      <button id="clearChatButton" class="clear-chat-btn">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                <div class="voice-popup" id="voicePopup">
+                  <div class="voice-popup-content">
+                    <i class="fas fa-microphone"></i>
+                    <p>Listening...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let speechQueue = [];
+    let isSpeaking = false;
+    let currentUtterance = null;
+    let isVoiceInput = false; // Menandai apakah input berasal dari voice recognition
+    
+    function processSpeechQueue() {
+      if (isSpeaking || speechQueue.length === 0) return;
+    
+      isSpeaking = true;
+      const text = speechQueue.shift();
+    
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'id-ID';
+    
+      currentUtterance.onend = () => {
+        isSpeaking = false;
+        currentUtterance = null;
+    
+        // Lanjutkan ke teks berikutnya, atau reset tombol jika antrian kosong
+        if (speechQueue.length > 0) {
+          processSpeechQueue();
+        } else {
+          resetSpeakerButtons(); // Kembalikan tombol ke ikon awal hanya jika selesai membaca seluruh teks
+        }
+      };
+    
+      currentUtterance.onerror = (error) => {
+        console.error('Speech synthesis error:', error);
+        isSpeaking = false;
+        currentUtterance = null;
+    
+        // Tetap lanjutkan ke teks berikutnya jika ada, atau reset tombol jika selesai
+        if (speechQueue.length > 0) {
+          processSpeechQueue();
+        } else {
+          resetSpeakerButtons();
+        }
+      };
+    
+      speechSynthesis.speak(currentUtterance);
+    }
+    
+    // Fungsi untuk menghentikan TTS yang sedang berjalan dan mengosongkan antrian
+    function stopSpeaking() {
+      if (currentUtterance) {
+        speechSynthesis.cancel(); // Hentikan semua TTS
+        isSpeaking = false;
+        currentUtterance = null;
+        speechQueue = []; // Kosongkan antrian
+        resetSpeakerButtons(); // Kembalikan tombol ke ikon awal
+      }
+    }
+    
+    // Fungsi untuk mereset semua tombol speaker ke ikon "Play"
+    function resetSpeakerButtons() {
+      document.querySelectorAll('.speaker-btn').forEach((button) => {
+        button.innerHTML = `<i class="fas fa-volume-up"></i>`;
+      });
+    }
+    
+    // Fungsi untuk memecah teks berdasarkan tanda baca
+    function splitTextByPunctuation(text) {
+      const sentences = text.split(/(?<=[.!?:;])\s+/).map(sentence => sentence.trim());
+      return sentences.filter(sentence => sentence.length > 0);
+    }
+    
+    document.querySelector('.conversation-container').addEventListener('click', (event) => {
+      const button = event.target.closest('.speaker-btn');
+      if (button) {
+        const messageContent = button.closest('.message').querySelector('.message-content');
+    
+        if (isSpeaking) {
+          stopSpeaking();
+        } else if (messageContent) {
+          resetSpeakerButtons();
+          button.innerHTML = `<i class="fas fa-stop"></i>`;
+          const sentences = splitTextByPunctuation(messageContent.textContent.trim());
+          speechQueue = [...sentences];
+          processSpeechQueue();
+        }
+      }
+    });
+    
+    function formatTime(date) {
+return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format HH:MM tanpa detik
+}
+    const chatForm = document.querySelector('.conversation-compose');
+    const inputField = document.querySelector('.input-msg');
+    const conversationContainer = document.querySelector('.conversation-container');
+    
+    chatForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+    
+      const userMessage = inputField.value.trim();
+      if (!userMessage) return;
+    
+      conversationContainer.innerHTML += `
+    <div class="message sent">
+      <div class="message-content">${userMessage}</div>
+      <span class="metadata"><span class="time">${formatTime(new Date())}</span></span>
+    </div>
+  `;
+      inputField.value = '';
+    
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: userMessage }),
+        });
+    
+        const data = await response.json();
+    
+// Fungsi untuk memformat teks sebagai poin-poin
+function formatAsPoints(text) {
+  const lines = text.split('\n');
+  const formattedLines = lines.map(line => {
+    if (/^\d+\./.test(line) || /^[•-]/.test(line)) { // Cek jika teks berupa poin
+      return `<li>${line.trim()}</li>`;
+    }
+    return line.trim();
+  });
+  
+  // Jika teks mengandung poin-poin, bungkus dengan tag <ul>
+  if (formattedLines.some(line => line.startsWith('<li>'))) {
+    return `<ul>${formattedLines.join('')}</ul>`;
+  }
+  
+  return text; // Jika tidak ada poin-poin, kembalikan teks asli
+}
+
+const formattedAnswer = formatAsPoints(data.answer);
+
+const botResponseHTML = `
+  <div class="message received">
+    <div class="message-content">${formattedAnswer}</div>
+    <span class="metadata"><span class="time">${formatTime(new Date())}</span></span>
+    <button class="speaker-btn">
+      <i class="fas fa-volume-up"></i>
+    </button>
+    <button class="copy-btn">
+     <i class="fas fa-copy"></i>
+    </button>
+  </div>
+`;
+
+    
+        conversationContainer.innerHTML += botResponseHTML;
+        conversationContainer.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+    
+        // Hanya bacakan teks jika input berasal dari voice recognition
+        if (isVoiceInput) {
+          const sentences = splitTextByPunctuation(data.answer);
+          speechQueue = [...sentences];
+          processSpeechQueue();
+          isVoiceInput = false;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        conversationContainer.innerHTML += `
+      <div class="message received">
+        <strong>Error:</strong> Something went wrong!
+        <span class="metadata"><span class="time">${formatTime(new Date())}</span></span>
+      </div>
+    `;
+      }
+    });
+    
+    // Fungsi sidebar
+    const openSidebarButton = document.getElementById('openSidebarButton');
+    const sidebar = document.getElementById('sidebar');
+    const page = document.querySelector('.page');
+    
+    openSidebarButton.addEventListener('click', () => {
+      const isSidebarActive = page.classList.contains('sidebar-active');
+      if (isSidebarActive) {
+        sidebar.style.transform = 'translateX(-100%)';
+        page.classList.remove('sidebar-active');
+      } else {
+        sidebar.style.transform = 'translateX(0)';
+        page.classList.add('sidebar-active');
+      }
+    });
+    
+    document.getElementById('clearChatButton').addEventListener('click', () => {
+      conversationContainer.innerHTML = '';
+    });
+    
+    // Voice recognition
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+    } else if ('SpeechRecognition' in window) {
+      recognition = new SpeechRecognition();
+    } else {
+      alert('Browser Anda tidak mendukung fitur Speech-to-Text!');
+    }
+    
+    if (recognition) {
+      recognition.lang = 'id-ID';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+    
+      const micButton = document.querySelector('.mic');
+      const voicePopup = document.getElementById('voicePopup');
+      const inputMsg = document.querySelector('.input-msg');
+    
+      micButton.addEventListener('click', () => {
+        if (micButton.classList.contains('active')) {
+          recognition.stop();
+          hideVoicePopup();
+        } else {
+          recognition.start();
+          showVoicePopup();
+        }
+        micButton.classList.toggle('active');
+      });
+    
+        recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        inputMsg.value = transcript;
+        console.log('Recognized:', transcript);
+        micButton.classList.remove('active');
+        isVoiceInput = true;
+    
+        setTimeout(() => {
+          chatForm.dispatchEvent(new Event('submit'));
+        }, Math.floor(Math.random() * 500) + 500);
+      };
+    }
+       recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event);
+        hideVoicePopup();
+      };
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended.');
+        hideVoicePopup();
+        micButton.classList.remove('active');
+      }
+      // Show popup
+    function showVoicePopup() {
+      voicePopup.style.display = 'block';
+    }
+
+    // Hide popup
+    function hideVoicePopup() {
+      voicePopup.style.display = 'none';
+    }
+    document.querySelector('.conversation-container').addEventListener('click', (event) => {
+  const copyButton = event.target.closest('.copy-btn');
+  if (copyButton) {
+    const messageContent = copyButton.closest('.message').querySelector('.message-content');
+    if (messageContent) {
+      const textToCopy = messageContent.textContent.trim();
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          // Berikan umpan balik kepada pengguna
+          copyButton.innerHTML = '<i class="fas fa-check"></i>'; // Ubah ikon menjadi tanda centang
+          setTimeout(() => {
+            copyButton.innerHTML = '<i class="fas fa-copy"></i>'; // Kembalikan ikon setelah 2 detik
+          }, 2000);
+        })
+        .catch((err) => {
+          console.error('Error copying text: ', err);
+        });
+    }
+  }
+});
+    </script>
+</body>
+</html>
